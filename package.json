@@ -1,0 +1,31 @@
+{
+  "name": "hibernot",
+  "version": "1.0.0",
+  "description": "\"Solution for hibernation using dynamic pings to your free tier backend services\"",
+  "homepage": "https://github.com/Harsh16Bhardwaj/Hibernot#readme",
+  "bugs": {
+    "url": "https://github.com/Harsh16Bhardwaj/Hibernot/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Harsh16Bhardwaj/Hibernot.git"
+  },
+  "license": "ISC",
+  "author": "Harsh Bhardwaj",
+  "type": "commonjs",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+  "build": "tsc",
+  "watch": "tsc --watch",
+  "start": "node dist/index.js",
+  "dev": "ts-node src/index.ts",
+  "prepare": "npm run build",
+  "lint": "eslint src --ext .ts"
+},
+
+  "devDependencies": {
+    "@types/node": "^22.15.18",
+    "typescript": "^5.8.3"
+  }
+}
