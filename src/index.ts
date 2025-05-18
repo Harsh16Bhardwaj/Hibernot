@@ -5,7 +5,7 @@ type KeepAliveOptions = {
 };
 
 export class Hibernot {
-  private static getCounter = 0;
+  private getCounter = 0; // Fixed: removed static
   private lastAPIhit = Date.now();
   private inactivityTimer: NodeJS.Timeout | null = null;
   private options: KeepAliveOptions;
@@ -15,7 +15,7 @@ export class Hibernot {
     setInterval(async () => {
       try {
         await this.options.keepAliveFn();
-        console.log('Hibernot initisalisation successful');
+        console.log('Hibernot initialisation successful');
       } catch (err) {
         console.error('Hibernot initialisation failed:', err);
       }
