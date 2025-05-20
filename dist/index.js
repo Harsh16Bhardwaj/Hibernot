@@ -12,17 +12,17 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.Hibernot = void 0;
 class Hibernot {
     constructor(options) {
-        this.getCounter = 0;
+        this.getCounter = 0; // Fixed: removed static
         this.lastAPIhit = Date.now();
         this.inactivityTimer = null;
         this.options = options;
         setInterval(() => __awaiter(this, void 0, void 0, function* () {
             try {
                 yield this.options.keepAliveFn();
-                console.log('Keep-alive successful');
+                console.log('Hibernot initialisation successful');
             }
             catch (err) {
-                console.error('Keep-alive failed:', err);
+                console.error('Hibernot initialisation failed:', err);
             }
         }), this.options.interval);
         this.resetInactivityTimer();
