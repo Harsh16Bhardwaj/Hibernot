@@ -1,46 +1,34 @@
 type KeepAliveOptions = {
-  interval: number,
-  inactivityLimit: number, // ms
-  keepAliveFn: () => Promise<void>
-};
+  inactivityLimit: number;
+  apiFn: ()=> Promise<void>;
+  name?: string | undefined;
+}
 
-export class Hibernot {
-  private getCounter = 0; // Fixed: removed static
-  private lastAPIhit = Date.now();
-  private inactivityTimer: NodeJS.Timeout | null = null;
+export class Hibernot{
+  //Private stuff
+  private getCounter = 0;
+  private lastAPIHit = Date.now();
+  private inactivityTimer: NodeJS.Timeout | null  = null;
   private options: KeepAliveOptions;
 
-  constructor(options: KeepAliveOptions) {
+  constructor(options:KeepAliveOptions){
+    if(typeof options.inactivityLimit !== 'number' || options.inactivityLimit <= 0){
+      throw new Error('InactivityLimit must be a positive number');
+    }
+    if(typeof options.apiFn !== 'function'){
+      throw new Error('apiFn provided is not a function');
+    }
+
     this.options = options;
-    setInterval(async () => {
-      try {
-        await this.options.keepAliveFn();
-        console.log('Hibernot initialisation successful');
-      } catch (err) {
-        console.error('Hibernot initialisation failed:', err);
-      }
-    }, this.options.interval);
     this.resetInactivityTimer();
   }
-
-  public apiHit() {
-    this.getCounter++;
-    this.lastAPIhit = Date.now();
+  public middleware(){
+  return (req: any, res: any, next: any) => {
     this.resetInactivityTimer();
-  }
-
-  private resetInactivityTimer() {
-    if (this.inactivityTimer) clearTimeout(this.inactivityTimer);
-    this.inactivityTimer = setTimeout(() => {
-      console.log('No API hit for', this.options.inactivityLimit / 1000, 'seconds. Self-hitting the API...');
-      this.options.keepAliveFn();
-    }, this.options.inactivityLimit);
-  }
-
-  public getStats() {
-    return {
-      getCounter: this.getCounter,
-      lastAPIhit: this.lastAPIhit
-    };
+    next();
   }
 }
+}
+
+
+

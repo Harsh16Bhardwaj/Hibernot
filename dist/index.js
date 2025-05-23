@@ -12,20 +12,25 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.Hibernot = void 0;
 class Hibernot {
     constructor(options) {
-        this.getCounter = 0; // Fixed: removed static
+        this.getCounter = 0;
         this.lastAPIhit = Date.now();
         this.inactivityTimer = null;
+        // Validate options
+        if (options.inactivityLimit <= 0) {
+            throw new Error('inactivityLimit must be a positive number');
+        }
+        if (!options.keepAliveFn || typeof options.keepAliveFn !== 'function') {
+            throw new Error('keepAliveFn must be a valid function');
+        }
         this.options = options;
-        setInterval(() => __awaiter(this, void 0, void 0, function* () {
-            try {
-                yield this.options.keepAliveFn();
-                console.log('Hibernot initialisation successful');
-            }
-            catch (err) {
-                console.error('Hibernot initialisation failed:', err);
-            }
-        }), this.options.interval);
         this.resetInactivityTimer();
+    }
+    // Middleware to track API hits automatically
+    middleware() {
+        return (req, res, next) => {
+            this.apiHit();
+            next();
+        };
     }
     apiHit() {
         this.getCounter++;
@@ -33,18 +38,38 @@ class Hibernot {
         this.resetInactivityTimer();
     }
     resetInactivityTimer() {
-        if (this.inactivityTimer)
+        if (this.inactivityTimer) {
             clearTimeout(this.inactivityTimer);
-        this.inactivityTimer = setTimeout(() => {
-            console.log('No API hit for', this.options.inactivityLimit / 1000, 'seconds. Self-hitting the API...');
-            this.options.keepAliveFn();
-        }, this.options.inactivityLimit);
+        }
+        this.inactivityTimer = setTimeout(() => __awaiter(this, void 0, void 0, function* () {
+            try {
+                const timeSinceLastHit = Date.now() - this.lastAPIhit;
+                if (timeSinceLastHit >= this.options.inactivityLimit) {
+                    console.log(`No API hit for ${this.options.inactivityLimit / 1000} seconds. Executing keepAliveFn...`);
+                    yield this.options.keepAliveFn();
+                    this.lastAPIhit = Date.now(); // Update after keepAliveFn
+                }
+            }
+            catch (err) {
+                console.error('Keep-alive function failed:', err);
+            }
+            finally {
+                // Restart timer
+                this.resetInactivityTimer();
+            }
+        }), this.options.inactivityLimit);
     }
     getStats() {
         return {
             getCounter: this.getCounter,
-            lastAPIhit: this.lastAPIhit
+            lastAPIhit: this.lastAPIhit,
         };
+    }
+    stop() {
+        if (this.inactivityTimer) {
+            clearTimeout(this.inactivityTimer);
+            this.inactivityTimer = null;
+        }
     }
 }
 exports.Hibernot = Hibernot;
