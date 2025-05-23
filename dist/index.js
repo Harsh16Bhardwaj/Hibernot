@@ -38,7 +38,7 @@ class Hibernot {
      */
     constructor(config) {
         // Tracks the number of times registerActivity() has been called (i.e., API hits).
-        this.activityCount = 0;
+        this.activityCount = 1;
         // Stores the timestamp (ms since epoch) of the last activity.
         this.lastActivityTimestamp = Date.now();
         // Holds the reference to the current inactivity timer (Node.js Timeout object).

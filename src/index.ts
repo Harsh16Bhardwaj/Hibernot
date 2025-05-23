@@ -31,7 +31,7 @@ type HibernotConfig = {
  */
 export class Hibernot {
   // Tracks the number of times registerActivity() has been called (i.e., API hits).
-  private activityCount = 0;
+  private activityCount = 1;
   // Stores the timestamp (ms since epoch) of the last activity.
   private lastActivityTimestamp = Date.now();
   // Holds the reference to the current inactivity timer (Node.js Timeout object).

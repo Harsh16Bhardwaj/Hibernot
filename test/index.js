@@ -21,7 +21,8 @@ const hibernotDB = new Hibernot({
   keepAliveFn: async () => {
     console.log('[PrimaryDB] Executing keep-alive database query...');
     const records = await fetchRecordsFromDB();
-    console.log('[PrimaryDB] Keep-alive query result:', records);
+    const stats= hibernotDB.getStats();
+    console.log("Hibernot hit", stats.activityCount);
   },
 });
 
