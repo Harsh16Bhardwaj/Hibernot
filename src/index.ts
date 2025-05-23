@@ -28,6 +28,33 @@ export class Hibernot{
     next();
   }
 }
+
+public apiHit(){
+  this.getCounter++;
+  this.lastAPIHit = Date.now();
+  this.resetInactivityTimer();
+}
+
+private resetInactivityTimer(){
+  if(this.inactivityTimer){
+    clearTimeout(this.inactivityTimer);
+  }
+}
+public getStats() {
+    return {
+      getCounter: this.getCounter,
+      lastAPIhit: this.lastAPIHit,
+      name: this.options.name || 'Unnamed',
+    };
+  }
+
+  // Stop the timer for cleanup
+  public stop() {
+    if (this.inactivityTimer) {
+      clearTimeout(this.inactivityTimer);
+      this.inactivityTimer = null;
+    }
+  }
 }
 
 
