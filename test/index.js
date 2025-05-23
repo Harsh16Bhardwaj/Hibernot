@@ -1,8 +1,8 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
-const axios = require('axios');
-const { Hibernot } = require('../dist/index.js'); // Adjust path or use 'hibernot' for npm package
+const { Hibernot } = require('../dist/index');
+
 const port = 3000;
 const app = express();
 
@@ -11,45 +11,52 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
 const fetchRecordsFromDB = async () => {
-  // Replace with actual DB logic (e.g., MongoDB, PostgreSQL)
   return [{ id: 1, name: 'Record 1' }, { id: 2, name: 'Record 2' }];
 };
 
-app.get('/', (req, res) => {
-
-  const hibernotDB = new Hibernot({
-    name: 'PrimaryDB',
-    inactivityLimit: 10000, // 5 minutes
-    keepAliveFn: async () => {
-      try {
-        // Ping the API to keep the DB alive (simulates a DB query)
-        const stats = hibernotDB.getStats();
-        console.log(
-          '[PrimaryDB] Hits:',
-          stats.getCounter,
-          'Last hit:',
-          new Date(stats.lastAPIhit).toLocaleString()
-        );
-      } catch (err) {
-        console.error('[PrimaryDB] Keep-alive ping failed:', err.message);
-      }
-    },
-  });
-  res.send('Welcome to the Hibernot API!');
+const hibernotDB = new Hibernot({
+  name: 'PrimaryDB',
+  inactivityLimit: 20000,
+  maxRetries: 3,
+  keepAliveFn: async () => {
+    console.log('[PrimaryDB] Executing keep-alive database query...');
+    const records = await fetchRecordsFromDB();
+    console.log('[PrimaryDB] Keep-alive query result:', records);
+  },
 });
 
+app.use('/', hibernotDB.middleware());
 
+app.get('/', async (req, res) => {
+  try {
+    const records = await fetchRecordsFromDB();
+    res.json({
+      message: 'Welcome to the Hibernot API!',
+      records,
+      stats: hibernotDB.getStats(),
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch records' });
+  }
+});
 
-// // API route to fetch records from DB
-// app.get('/db', async (req, res) => {
-//   try {
-//     const records = await fetchRecordsFromDB();
-//     res.json({
-//       message: 'Primary DB endpoint',
-//       records,
-//       stats: hibernotDB.getStats(),
-//     });
-//   } catch (err) {
-//     res.status(500).json({ error: 'Failed to fetch records' });
-//   }
-// });
+app.get('/hibernot-stats', (req, res) => {
+  res.json({ primaryDB: hibernotDB.getStats() });
+});
+
+app.post('/hibernot-reset', (req, res) => {
+  hibernotDB.resetCounter();
+  res.json({ message: 'Counter reset', stats: hibernotDB.getStats() });
+});
+
+const server = app.listen(port, () => {
+  console.log(`Server is running on http://localhost:${port}`);
+});
+
+process.on('SIGTERM', () => {
+  hibernotDB.stop();
+  server.close(() => {
+    console.log('Server stopped');
+    process.exit(0);
+  });
+});

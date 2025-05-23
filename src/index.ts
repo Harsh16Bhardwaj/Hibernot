@@ -13,7 +13,7 @@ export class HibernotError extends Error {
 // - instanceName: Optional identifier for logging/debugging.
 // - maxRetryAttempts: Optional number of times to retry keepAliveFn on failure.
 type HibernotConfig = {
-  inactivityLimitMs: number; // ms
+  inactivityLimit: number; // ms
   keepAliveFn: () => Promise<void>;
   instanceName?: string; 
   maxRetryAttempts?: number; 
@@ -47,8 +47,8 @@ export class Hibernot {
    */
   constructor(config: HibernotConfig) {
     // Validate inactivityLimitMs: must be a positive number.
-    if (typeof config.inactivityLimitMs !== 'number' || config.inactivityLimitMs <= 0) {
-      throw new HibernotError('inactivityLimitMs must be a positive number');
+    if (typeof config.inactivityLimit !== 'number' || config.inactivityLimit <= 0) {
+      throw new HibernotError('inactivityLimit must be a positive number');
     }
     // Validate keepAliveFn: must be a function.
     if (!config.keepAliveFn || typeof config.keepAliveFn !== 'function') {
@@ -124,10 +124,10 @@ export class Hibernot {
     this.inactivityTimeout = setTimeout(async () => {
       try {
         const msSinceLastActivity = Date.now() - this.lastActivityTimestamp;
-        if (msSinceLastActivity >= this.config.inactivityLimitMs) {
+        if (msSinceLastActivity >= this.config.inactivityLimit) {
           console.log(
             `[${this.config.instanceName || 'Hibernot'}] No activity for ${
-              this.config.inactivityLimitMs / 1000
+              this.config.inactivityLimit / 1000
             } seconds. Executing keepAliveFn...`
           );
           await this.executeKeepAliveWithRetries();
@@ -141,7 +141,7 @@ export class Hibernot {
         // Always reset the timer for the next inactivity window.
         this.resetInactivityTimeout();
       }
-    }, this.config.inactivityLimitMs);
+    }, this.config.inactivityLimit);
   }
 
   /**
