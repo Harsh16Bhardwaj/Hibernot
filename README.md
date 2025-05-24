@@ -1,53 +1,160 @@
-# @nightsWatch/hibernot
+# Hibernot
 
-A planned NPM package to prevent database hibernation in free-tier cloud services like Supabase and MongoDB Atlas by sending periodic API pings.
+**Hibernot** is a lightweight TypeScript/JavaScript utility for keeping your Node.js services "warm" by automatically running a keep-alive function after a period of inactivity. It's especially useful for serverless or containerized environments where you want to avoid cold starts or resource hibernation due to inactivity.
 
-## The Problem
+---
 
-Free-tier cloud databases (e.g., Supabase, MongoDB Atlas) hibernate after inactivity (e.g., 15m–7d), pausing compute resources to save costs. This causes 5–30s wakeup delays when an API call hits the database, leading to:
+## Why Hibernot?
 
-- **User Experience Issues**: Slow responses for the first request after inactivity (e.g., app loading delays).
-- **API Failures**: Timeouts or connection errors if wakeup exceeds client timeouts (e.g., 10s HTTP requests).
-- **Development Complexity**: Programmers must implement retries or caching, increasing app complexity.
+Many cloud providers or hosting platforms will scale down, hibernate, or cold-start your service if it hasn't received traffic for a while. Hibernot helps you prevent this by running a custom keep-alive function (like a ping or a warm-up task) after a configurable period of inactivity.
 
-This impacts application programmers, especially on low-traffic apps (e.g., prototypes, side projects), where hibernation is common on free tiers, degrading performance and reliability.
+---
 
-## What We’re Thinking of Building
+## Installation
 
-**Hibernot** aims to keep databases active by periodically pinging their APIs, preventing hibernation for Node.js apps.
+```bash
+npm install hibernot
+```
 
-### Wishful Features
+---
 
-- **Periodic Pinging**: Send lightweight queries (e.g., `SELECT 1` for Supabase, `db.ping()` for MongoDB) at configurable intervals (e.g., every 5–15m).
-- **Traffic-Based Scheduling**: Adjust ping frequency based on app traffic to minimize unnecessary requests.
-- **Multi-Database Support**: Target Supabase, MongoDB Atlas, and potentially others (e.g., PlanetScale).
-- **Low Resource Usage**: Optimize pings to respect API rate limits and avoid extra costs.
-- **Simple Setup**: Easy integration with minimal configuration for Node.js apps.
+## Usage
 
-## Current Status
+### 1. Import and Configure
 
-This package is in the **planning phase**. We’re refining the concept and seeking community input before development. No code exists yet, but we’re committed to solving the hibernation problem for budget-conscious developers.
+```typescript
+import { Hibernot } from 'hibernot';
 
-## Contributing
+const hibernot = new Hibernot({
+  inactivityLimit: 60000, // 1 minute in milliseconds
+  keepAliveFn: async () => {
+    // Your keep-alive logic here (e.g., ping a health endpoint, warm up cache, etc.)
+    console.log('Keep-alive triggered!');
+  },
+  instanceName: 'MyService', // Optional, for logging
+  maxRetryAttempts: 5        // Optional, default is 3
+});
+```
 
-Help us shape **Hibernot**! Share ideas or suggestions on GitHub:
+---
 
-1. Visit [github.com/codestreak/hibernot](https://github.com/codestreak/hibernot) (repo coming soon).
-2. Open an issue to propose features, databases, or use cases.
-3. Suggest via [GitHub Discussions](https://github.com/codestreak/hibernot/discussions) (once live).
+### 2. Integrate with Express (or any middleware-based framework)
 
-### Ideas We’d Love
+If you're using Express, you can use the built-in middleware to automatically register activity on every request:
 
-- Strategies for traffic-based ping intervals.
-- Additional database support (e.g., Neon, Firebase).
-- Ways to monitor ping success/failure.
-- Rate limit handling techniques.
+```typescript
+import express from 'express';
+
+const app = express();
+
+app.use(hibernot.middleware());
+
+// ... your routes here
+
+app.listen(3000);
+```
+
+---
+
+### 3. Manual Activity Registration
+
+If you want to manually signal activity (for example, from a non-HTTP event), just call:
+
+```typescript
+hibernot.registerActivity();
+```
+
+---
+
+### 4. Monitoring and Control
+
+- **Get stats:**  
+  Retrieve current stats for monitoring or debugging:
+  ```typescript
+  console.log(hibernot.getStats());
+  ```
+
+- **Reset activity count:**  
+  Useful for tests or monitoring resets:
+  ```typescript
+  hibernot.resetActivityCount();
+  ```
+
+- **Stop the timer:**  
+  If you want to disable inactivity detection (e.g., during shutdown):
+  ```typescript
+  hibernot.stop();
+  ```
+
+---
+
+## Configuration Options
+
+| Option             | Type             | Required | Description                                                                 |
+|--------------------|------------------|----------|-----------------------------------------------------------------------------|
+| inactivityLimit    | `number`         | Yes      | Time in ms to wait before triggering `keepAliveFn` after inactivity.        |
+| keepAliveFn        | `() => Promise`  | Yes      | Async function to call when inactivity limit is reached.                    |
+| instanceName       | `string`         | No       | Optional name for logging/debugging.                                        |
+| maxRetryAttempts   | `number`         | No       | How many times to retry `keepAliveFn` on failure (default: 3).              |
+
+---
+
+## How It Works
+
+- Every time activity is registered (via HTTP request or manually), Hibernot resets its inactivity timer.
+- If no activity occurs for `inactivityLimit` ms, Hibernot calls your `keepAliveFn`.
+- If `keepAliveFn` fails, it will retry up to `maxRetryAttempts` times (with a 1-second delay between attempts).
+- After a successful keep-alive, Hibernot registers a new activity, so the cycle continues.
+
+---
+
+## Example: Full Setup
+
+```typescript
+import { Hibernot } from 'hibernot';
+import express from 'express';
+
+const hibernot = new Hibernot({
+  inactivityLimit: 120000, // 2 minutes
+  keepAliveFn: async () => {
+    // Example: ping your own health endpoint
+    await fetch('https://your-service/health');
+  },
+  instanceName: 'API',
+  maxRetryAttempts: 2
+});
+
+const app = express();
+app.use(hibernot.middleware());
+
+app.get('/', (req, res) => res.send('Hello World!'));
+
+app.listen(3000, () => console.log('Server running on port 3000'));
+```
+
+---
+
+## FAQ
+
+**Q: Can I use this outside of Express?**  
+A: Yes! Just call `registerActivity()` whenever you want to signal activity.
+
+**Q: What happens if my keepAliveFn keeps failing?**  
+A: Hibernot will retry up to `maxRetryAttempts` times, then log an error and continue monitoring.
+
+**Q: Is this safe for production?**  
+A: Yes, but make sure your `keepAliveFn` is idempotent and doesn't cause side effects if called repeatedly.
+
+---
 
 ## License
 
-MIT License (planned). Details will be added upon release.
+MIT
 
 ---
-**Hibernot** is a project in the planning phase. We’re refining the concept and seeking community input before development. No code exists yet, but we’re committed to solving the hibernation problem for budget-conscious developers. Stay tuned for updates and contributions! 🚀🚀🚀🚀
 
-Let’s keep databases awake and apps responsive!
+## Contributing
+
+Feel free to open issues or PRs! If you want to tweak the inactivity logic or retry strategy, check the comments in the source code—everything is documented for easy modification.
+
+---
