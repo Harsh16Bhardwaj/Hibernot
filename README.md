@@ -7,7 +7,7 @@
 ## Why Hibernot?
 
 Many cloud providers or hosting platforms will scale down, hibernate, or cold-start your service if it hasn't received traffic for a while. Hibernot helps you prevent this by running a custom keep-alive function (like a ping or a warm-up task) after a configurable period of inactivity.
-(https://dev-to-uploads.s3.amazonaws.com/uploads/articles/7pwaiwv34q0jnpv8apum.jpg)
+![Theme Image](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/7pwaiwv34q0jnpv8apum.jpg)
 
 ---
 
